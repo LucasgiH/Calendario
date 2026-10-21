@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Meu calendário</title>
+    <style>
+        canvas {
+            border: 2px dotted black;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="meuCanvas" width="350" height="250"></canvas>
+
+<script>
+const canvas = document.getElementById("meuCanvas");
+const ctx = canvas.getContext("2d");
+
+// Desenhar a base de madeira
+ctx.fillStyle = "brown";
+ctx.fillRect(25, 180, 300, 30);
+</script>
+
+</body>
+</html>
