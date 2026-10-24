@@ -41,13 +41,27 @@
         
         // Haste esquerda do calendário
         ctx.strokeStyle = "#9B6349";
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 4;
 
         ctx.beginPath();
         ctx.moveTo(50, 175);
         ctx.lineTo(50, 65);
         ctx.stroke();
+        
+        // Haste superior do calendário
+        ctx.beginPath();
+        ctx.moveTo(50, 65);
 
+        // Curva arredondada da esquerda
+        ctx.quadraticCurveTo(50, 50, 65, 50);
+
+        // Barra horizontal
+        ctx.lineTo(285, 50);
+
+        // Curva arredondada da direita
+        ctx.quadraticCurveTo(300, 50, 300, 65);
+
+        ctx.stroke();
     </script>
 </body>
 </html>
