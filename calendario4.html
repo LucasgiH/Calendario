@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- colocando primeira fivela lado esquerdo calendario -->
+<!-- colocando argolas calendario -->
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -73,11 +73,31 @@
         ctx.beginPath();
         // centro (87, 68), raio 12; começa em -60° e dá a volta quase toda
         ctx.arc(87, 62, 12, -Math.PI / 2, -2.7 * Math.PI / 3);
-        ctx.stroke();*/
+        ctx.stroke();
         ctx.lineWidth = 3.3;
         ctx.beginPath();
-        ctx.ellipse(93, 63, 5, 14, 0, -Math.PI / 3, -2.7 * Math.PI / 3);
+        ctx.ellipse(96, 63, 2.5, 14, 0, -Math.PI / 3, -2.7 * Math.PI / 3);
         ctx.stroke();
+        
+        ctx.lineWidth = 3.3;
+        ctx.beginPath();
+        ctx.ellipse(143, 63, 2.5, 14, 0, -Math.PI / 3, -2.7 * Math.PI / 3);
+        ctx.stroke();
+        
+        ctx.lineWidth = 3.3;
+        ctx.beginPath();
+        ctx.ellipse(190, 63, 2.5, 14, 0, -Math.PI / 3, -2.7 * Math.PI / 3);
+        ctx.stroke();*/
+        function desenharArgola(x) {
+            ctx.lineWidth = 3.3;
+            ctx.beginPath();
+            ctx.ellipse(x, 63, 2.5, 14, 0, -Math.PI / 3, -2.7 * Math.PI / 3);
+            ctx.stroke();
+        }
+        
+        for (let i = 0; i < 4; i++) {
+            desenharArgola(103 + i * 47);
+        }
     </script>
 </body>
 </html>
