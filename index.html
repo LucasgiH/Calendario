@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- colocando argolas calendario -->
+<!-- colocando cartao argola -->
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -68,26 +68,18 @@
         ctx.moveTo(300, 175);
         ctx.lineTo(300, 65);
         ctx.stroke();
-        /*
-        // Primeira argola do calendário
-        ctx.beginPath();
-        // centro (87, 68), raio 12; começa em -60° e dá a volta quase toda
-        ctx.arc(87, 62, 12, -Math.PI / 2, -2.7 * Math.PI / 3);
-        ctx.stroke();
-        ctx.lineWidth = 3.3;
-        ctx.beginPath();
-        ctx.ellipse(96, 63, 2.5, 14, 0, -Math.PI / 3, -2.7 * Math.PI / 3);
-        ctx.stroke();
         
-        ctx.lineWidth = 3.3;
-        ctx.beginPath();
-        ctx.ellipse(143, 63, 2.5, 14, 0, -Math.PI / 3, -2.7 * Math.PI / 3);
-        ctx.stroke();
+        // Primeiro cartão (centralizado na primeira argola, x = 96)
+        /*const cartaoLargura = 42;
+        const cartaoAltura = 88;
+        const cartaoX = 96 - cartaoLargura / 2; // 75
+        const cartaoY = 66;
         
-        ctx.lineWidth = 3.3;
+        ctx.fillStyle = "blue";
         ctx.beginPath();
-        ctx.ellipse(190, 63, 2.5, 14, 0, -Math.PI / 3, -2.7 * Math.PI / 3);
-        ctx.stroke();*/
+        ctx.roundRect(cartaoX, cartaoY, cartaoLargura, cartaoAltura, 5);
+        ctx.fill();
+        
         function desenharArgola(x) {
             ctx.lineWidth = 3.3;
             ctx.beginPath();
@@ -96,8 +88,36 @@
         }
         
         for (let i = 0; i < 4; i++) {
-            desenharArgola(103 + i * 47);
+            desenharArgola(96 + i * 52);
+        }*/
+        function desenharArgola(x, parte) {
+            ctx.strokeStyle = "#9B6349";
+            ctx.lineWidth = 3.3;
+            ctx.beginPath();
+            if (parte === "tras") {
+                // metade direita
+                ctx.ellipse(x, 63, 2.5, 14, 0, -Math.PI / 3, Math.PI / 2);
+            } else {
+                // metade esquerda, até o começo da abertura
+                ctx.ellipse(x, 63, 2.5, 14, 0, Math.PI / 2, 1.1 * Math.PI);
+            }
+            ctx.stroke();
         }
+        
+        function desenharCartao(x) {
+            const largura = 42, altura = 88;
+            ctx.fillStyle = "blue";
+            ctx.beginPath();
+            ctx.roundRect(x - largura / 2, 69, largura, altura, 5);
+            // furo: círculo no mesmo caminho, vazado com "evenodd"
+            ctx.moveTo(x + 3.5, 77);
+            ctx.arc(x, 77, 3.5, 0, 2 * Math.PI);
+            ctx.fill("evenodd");
+        }
+        
+        desenharArgola(96, "tras");   // 1º: parte de trás da argola
+        desenharCartao(96);           // 2º: cartão com furo
+        desenharArgola(96, "frente"); // 3º: parte da frente, por cima
     </script>
 </body>
 </html>
