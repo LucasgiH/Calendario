@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<!-- sequencia de passos ida e volta movimento livre corrigido -->
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu calendário - Controle por Linha do Tempo</title>
+    <style>
+        canvas {
+            display: block;
+            width: 100%;
+            max-width: 350px;
+            height: auto;
+            border: 2px dotted black;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="meuCanvas" width="350" height="250"></canvas>
+
+    <script>
+        const canvas = document.getElementById("meuCanvas");
+        const ctx = canvas.getContext("2d");
+        const grau = Math.PI / 180;
+
+        const ARGOLA = { x: 96, y: 63, rx: 2.5, ry: 14 };
+
+        function desenharCenario() {
+            ctx.fillStyle = "brown";
+            ctx.fillRect(25, 180, 300, 25);
+
+            ctx.fillStyle = "#A66A3F";
+            ctx.beginPath();
+            ctx.moveTo(25, 180);
+            ctx.lineTo(45, 165);
+            ctx.lineTo(305, 165);
+            ctx.lineTo(325, 180);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.strokeStyle = "#9B6349";
+            ctx.lineWidth = 4;
+
+            ctx.beginPath();
+            ctx.moveTo(50, 175);
+            ctx.lineTo(50, 65);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(50, 65);
+            ctx.quadraticCurveTo(50, 50, 65, 50);
+            ctx.lineTo(285, 50);
+            ctx.quadraticCurveTo(300, 50, 300, 65);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(300, 175);
+            ctx.lineTo(300, 65);
+            ctx.stroke();
+        }
+
+        function arcoArgola(de, ate) {
+            ctx.strokeStyle = "#9B6349";
+            ctx.lineWidth = 3.3;
+            ctx.beginPath();
+            ctx.ellipse(ARGOLA.x, ARGOLA.y, ARGOLA.rx, ARGOLA.ry, 0, de, ate);
+            ctx.stroke();
+        }
+
+        function posicaoFuro(a) {
+            return [
+                ARGOLA.x + ARGOLA.rx * Math.cos(a),
+                ARGOLA.y + ARGOLA.ry * Math.sin(a)
+            ];
+        }
+
+        function contornoCartao(largura, altura, topo, raio, passos = 6) {
+            const esq = -largura / 2, dir = largura / 2, base = topo + altura;
+            const cantos = [
+                { cx: dir - raio, cy: topo + raio, a0: -90 },
+                { cx: dir - raio, cy: base - raio, a0: 0 },
+                { cx: esq + raio, cy: base - raio, a0: 90 },
+                { cx: esq + raio, cy: topo + raio, a0: 180 }
+            ];
+            const pts = [];
+            for (const c of cantos) {
+                for (let i = 0; i <= passos; i++) {
+                    const a = (c.a0 + 90 * i / passos) * grau;
+                    pts.push([c.cx + Math.cos(a) * raio, c.cy + Math.sin(a) * raio]);
+                }
+            }
+            return pts;
+        }
+
+        function projetar(px, py, angulo, inclinacaoVertical = 0, inclinacaoLateral = 0) {
+            const perspectiva = 300;
+            
+            // 1. Aplica a inclinação lateral (gira no eixo vertical - esquerda/direita)
+            const xi = px * Math.cos(inclinacaoLateral);
+            let z    = px * Math.sin(inclinacaoLateral);
+            
+            // 2. Aplica a inclinação vertical (gira no eixo horizontal - deitar/frente)
+            const yi = py * Math.cos(inclinacaoVertical);
+            z       += py * Math.sin(inclinacaoVertical);
+            
+            const s  = perspectiva / (perspectiva - z);
+            const x2 = xi * s, y2 = yi * s;
+            
+            // 3. Rotação final no plano 2D da tela
+            return [
+                x2 * Math.cos(angulo) - y2 * Math.sin(angulo),
+                x2 * Math.sin(angulo) + y2 * Math.cos(angulo)
+            ];
+        }
+
+        function desenharCartao(hx, hy, angulo, incV, incL) {
+            ctx.save();
+            ctx.translate(hx, hy);
+            ctx.fillStyle = "blue";
+            ctx.beginPath();
+
+            contornoCartao(42, 88, -8, 5).forEach(([px, py], i) => {
+                const [qx, qy] = projetar(px, py, angulo, incV, incL);
+                if (i === 0) ctx.moveTo(qx, qy); else ctx.lineTo(qx, qy);
+            });
+            ctx.closePath();
+
+            for (let i = 0; i <= 24; i++) {
+                const a = 2 * Math.PI * i / 24;
+                const [qx, qy] = projetar(Math.cos(a) * 3.5, Math.sin(a) * 3.5, angulo, incV, incL);
+                if (i === 0) ctx.moveTo(qx, qy); else ctx.lineTo(qx, qy);
+            }
+            ctx.closePath();
+
+            ctx.fill("evenodd");
+            ctx.restore();
+        }
+
+        // ============================================================
+        // SPRITES & ETAPAS DA MÃO
+        // ============================================================
+        const passosAnimacao = [
+            { 
+                a: 90 * grau,  angulo: 0,         inclinacaoVertical: 0, inclinacaoLateral: 0, livre: false, 
+                duracaoParaProximo: 400  
+            },
+            { 
+                a: 150 * grau, angulo: 22 * grau, inclinacaoVertical: 0, inclinacaoLateral: 0, livre: false, 
+                duracaoParaProximo: 400  
+            },
+            {
+                x: 89, y: 45, angulo: 3 * grau, inclinacaoVertical: 0, inclinacaoLateral: 0, livre: true, duracaoParaProximo: 1000
+            },
+            {
+                x: 89, y: 45, angulo: 3 * grau, inclinacaoVertical: 0, inclinacaoLateral: 0, livre: true, duracaoParaProximo: 1000
+            },
+            { 
+                x: 92, y: 37, 
+                angulo: 12 * grau, 
+                inclinacaoVertical: 0,         
+                inclinacaoLateral: 74 * grau,  
+                livre: true, 
+                duracaoParaProximo: 1200 
+            },
+            // --- VOLTA ---
+            { 
+                a: 198 * grau, angulo: 50 * grau, inclinacaoVertical: 0, inclinacaoLateral: 0, livre: false, 
+                duracaoParaProximo: 200 
+            },
+            { 
+                a: 150 * grau, angulo: 22 * grau, inclinacaoVertical: 0, inclinacaoLateral: 0, livre: false, 
+                duracaoParaProximo: 300  
+            },
+            { 
+                a: 90 * grau,  angulo: 0,         inclinacaoVertical: 0, inclinacaoLateral: 0, livre: false, 
+                duracaoParaProximo: 200  
+            }
+        ];
+
+        function misturar(s1, s2, t) {
+            const incV1 = s1.inclinacaoVertical || 0;
+            const incV2 = s2.inclinacaoVertical || 0;
+            const incL1 = s1.inclinacaoLateral || 0;
+            const incL2 = s2.inclinacaoLateral || 0;
+
+            if (s2.livre) {
+                const posS1 = s1.livre ? [s1.x, s1.y] : posicaoFuro(s1.a);
+                return {
+                    x:                  posS1[0] + (s2.x - posS1[0]) * t,
+                    y:                  posS1[1] + (s2.y - posS1[1]) * t,
+                    angulo:             s1.angulo     + (s2.angulo     - s1.angulo)     * t,
+                    inclinacaoVertical: incV1         + (incV2         - incV1)         * t,
+                    inclinacaoLateral:  incL1         + (incL2         - incL1)         * t,
+                    livre:              true
+                };
+            }
+
+            if (s1.livre) {
+                const posS2 = posicaoFuro(s2.a);
+                return {
+                    x:                  s1.x + (posS2[0] - s1.x) * t,
+                    y:                  s1.y + (posS2[1] - s1.y) * t,
+                    angulo:             s1.angulo     + (s2.angulo     - s1.angulo)     * t,
+                    inclinacaoVertical: incV1         + (incV2         - incV1)         * t,
+                    inclinacaoLateral:  incL1         + (incL2         - incL1)         * t,
+                    livre:              true
+                };
+            }
+
+            return {
+                a:                  s1.a          + (s2.a          - s1.a)          * t,
+                angulo:             s1.angulo     + (s2.angulo     - s1.angulo)     * t,
+                inclinacaoVertical: incV1         + (incV2         - incV1)         * t,
+                inclinacaoLateral:  incL1         + (incL2         - incL1)         * t,
+                livre:              false
+            };
+        }
+
+        let inicio = null;
+
+        function animar(tempo) {
+            if (inicio === null) inicio = tempo;
+            let tempoDecorrido = tempo - inicio;
+
+            let indiceAtual = 0;
+            for (let i = 0; i < passosAnimacao.length - 1; i++) {
+                const duracaoDestePasso = passosAnimacao[i].duracaoParaProximo;
+                if (tempoDecorrido < duracaoDestePasso) {
+                    indiceAtual = i;
+                    break;
+                }
+                tempoDecorrido -= duracaoDestePasso;
+                indiceAtual = i + 1;
+            }
+
+            if (indiceAtual >= passosAnimacao.length - 1) {
+                inicio = tempo;
+                animar(tempo);
+                return;
+            }
+
+            const s1 = passosAnimacao[indiceAtual];
+            const s2 = passosAnimacao[indiceAtual + 1];
+            
+            const t = tempoDecorrido / s1.duracaoParaProximo;
+            const estado = misturar(s1, s2, t);
+
+            // Descobre corretamente a posição do furo (hx, hy)
+            let hx, hy;
+            if (estado.livre) {
+                hx = estado.x;
+                hy = estado.y;
+            } else {
+                const pos = posicaoFuro(estado.a);
+                hx = pos[0];
+                hy = pos[1];
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            desenharCenario();
+
+            // Desenha a argola e o cartão com as inclinações corretas
+            if (estado.livre) {
+                arcoArgola(-60 * grau, 198 * grau);
+                desenharCartao(hx, hy, estado.angulo, estado.inclinacaoVertical, estado.inclinacaoLateral);
+            } else {
+                arcoArgola(-60 * grau, estado.a);
+                desenharCartao(hx, hy, estado.angulo, estado.inclinacaoVertical, estado.inclinacaoLateral);
+                arcoArgola(estado.a, 198 * grau);
+            }
+
+            requestAnimationFrame(animar);
+        }
+
+        requestAnimationFrame(animar);
+    </script>
+</body>
+</html>
