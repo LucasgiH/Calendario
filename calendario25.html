@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Canvas com Imagem de Referência em Opacidade</title>
+    <style>
+        body {
+            background-color: #222;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            position: relative;
+            width: 400px;
+            height: 300px;
+        }
+        canvas {
+            background-color: #111;
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        /* Botão posicionado fora do canvas */
+        #btnAlternarOpacidade {
+            margin-top: 15px;
+            padding: 8px 16px;
+            background-color: #444;
+            color: #fff;
+            border: 1px solid #666;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        #btnAlternarOpacidade:hover {
+            background-color: #555;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Seu elemento Canvas -->
+        <canvas id="meuCanvas" width="400" height="300"></canvas>
+    </div>
+
+    <!-- Botão fora do canvas para alternar os estados da imagem -->
+    <button id="btnAlternarOpacidade">Modo Imagem: Opacidade Atual (0.6)</button>
+
+    <script>
+        const canvas = document.getElementById("meuCanvas");
+        const ctx = canvas.getContext("2d");
+        const grau = Math.PI / 180;
+
+        const ARGOLA = { x: 96, y: 63, rx: 2.5, ry: 14 };
+        const imagemReferencia = new Image();
+        imagemReferencia.src = 'Sprite1.jpg'; // Insira o link da sua imagem aqui
+
+        // Variáveis de controle de estado (0 = Opacidade Padrão, 1 = 100%, 2 = Oculto)
+        let estadoVisualizacao = 0; 
+        let opacidadePadrao = 0.6; 
+        
+        // Configurando o botão do HTML para alternar os 3 estados
+        const btnAlternar = document.getElementById("btnAlternarOpacidade");
+        btnAlternar.addEventListener("click", () => {
+            estadoVisualizacao = (estadoVisualizacao + 1) % 3; // Alterna ciclicamente entre 0, 1 e 2
+
+            if (estadoVisualizacao === 0) {
+                btnAlternar.innerText = "Modo Imagem: Opacidade Atual (0.6)";
+            } else if (estadoVisualizacao === 1) {
+                btnAlternar.innerText = "Modo Imagem: 100% Visível";
+            } else {
+                btnAlternar.innerText = "Modo Imagem: Oculta (Apenas Canvas)";
+            }
+        });
+
+        function desenharCenario() {
+            ctx.fillStyle = "brown";
+            ctx.fillRect(25, 180, 300, 25);
+
+            ctx.fillStyle = "#A66A3F";
+            ctx.beginPath();
+            ctx.moveTo(25, 180);
+            ctx.lineTo(45, 165);
+            ctx.lineTo(305, 165);
+            ctx.lineTo(325, 180);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.strokeStyle = "#9B6349";
+            ctx.lineWidth = 4;
+
+            ctx.beginPath();
+            ctx.moveTo(50, 175);
+            ctx.lineTo(50, 65);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(50, 65);
+            ctx.quadraticCurveTo(50, 50, 65, 50);
+            ctx.lineTo(285, 50);
+            ctx.quadraticCurveTo(300, 50, 300, 65);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(300, 175);
+            ctx.lineTo(300, 65);
+            ctx.stroke();
+        }
+
+        function arcoArgola(de, ate) {
+            ctx.strokeStyle = "#9B6349";
+            ctx.lineWidth = 3.3;
+            ctx.beginPath();
+            ctx.ellipse(ARGOLA.x, ARGOLA.y, ARGOLA.rx, ARGOLA.ry, 0, de, ate);
+            ctx.stroke();
+        }
+
+        function posicaoFuro(a) {
+            return [
+                ARGOLA.x + ARGOLA.rx * Math.cos(a),
+                ARGOLA.y + ARGOLA.ry * Math.sin(a)
+            ];
+        }
+
+        function contornoCartao(largura, altura, topo, raio, passos = 6) {
+            const esq = -largura / 2, dir = largura / 2, base = topo + altura;
+            const cantos = [
+                { cx: dir - raio, cy: topo + raio, a0: -90 },
+                { cx: dir - raio, cy: base - raio, a0: 0 },
+                { cx: esq + raio, cy: base - raio, a0: 90 },
+                { cx: esq + raio, cy: topo + raio, a0: 180 }
+            ];
+            const pts = [];
+            for (const c of cantos) {
+                for (let i = 0; i <= passos; i++) {
+                    const a = (c.a0 + 90 * i / passos) * grau;
+                    pts.push([c.cx + Math.cos(a) * raio, c.cy + Math.sin(a) * raio]);
+                }
+            }
+            return pts;
+        }
+
+        function projetar(px, py, angulo, inclinacaoVertical = 0, inclinacaoLateral = 0) {
+            const perspectiva = 300;
+            const xi = px * Math.cos(inclinacaoLateral);
+            let z    = px * Math.sin(inclinacaoLateral);
+            const yi = py * Math.cos(inclinacaoVertical);
+            z       += py * Math.sin(inclinacaoVertical);
+            const s  = perspectiva / (perspectiva - z);
+            const x2 = xi * s, y2 = yi * s;
+            return [
+                x2 * Math.cos(angulo) - y2 * Math.sin(angulo),
+                x2 * Math.sin(angulo) + y2 * Math.cos(angulo)
+            ];
+        }
+
+        function desenharCartao(hx, hy, angulo, incV, incL) {
+            ctx.save();
+            ctx.translate(hx, hy);
+            ctx.fillStyle = "blue";
+            ctx.beginPath();
+
+            contornoCartao(42, 88, -8, 5).forEach(([px, py], i) => {
+                const [qx, qy] = projetar(px, py, angulo, incV, incL);
+                if (i === 0) ctx.moveTo(qx, qy); else ctx.lineTo(qx, qy);
+            });
+            ctx.closePath();
+
+            for (let i = 0; i <= 24; i++) {
+                const a = 2 * Math.PI * i / 24;
+                const [qx, qy] = projetar(Math.cos(a) * 3.5, Math.sin(a) * 3.5, angulo, incV, incL);
+                if (i === 0) ctx.moveTo(qx, qy); else ctx.lineTo(qx, qy);
+            }
+            ctx.closePath();
+
+            ctx.fill("evenodd");
+            ctx.restore();
+        }
+
+        const passosAnimacao = [
+            { a: 90 * grau,  angulo: 0,         inclinacaoVertical: 0, inclinacaoLateral: 0, livre: false, duracaoParaProximo: 400 },
+            { a: 150 * grau, angulo: 22 * grau, inclinacaoVertical: 0, inclinacaoLateral: 0, livre: false, duracaoParaProximo: 400 },
+            { x: 89, y: 45, angulo: 3 * grau, inclinacaoVertical: 0, inclinacaoLateral: 0, livre: true, duracaoParaProximo: 1000 },
+            { x: 89, y: 45, angulo: 3 * grau, inclinacaoVertical: 0, inclinacaoLateral: 0, livre: true, duracaoParaProximo: 1000 },
+            { x: 92, y: 37, angulo: 12 * grau, inclinacaoVertical: 0, inclinacaoLateral: 74 * grau, livre: true, duracaoParaProximo: 1200 },
+            { a: 198 * grau, angulo: 50 * grau, inclinacaoVertical: 0, inclinacaoLateral: 0, livre: false, duracaoParaProximo: 200 },
+            { a: 150 * grau, angulo: 22 * grau, inclinacaoVertical: 0, inclinacaoLateral: 0, livre: false, duracaoParaProximo: 300 },
+            { a: 90 * grau,  angulo: 0,         inclinacaoVertical: 0, inclinacaoLateral: 0, livre: false, duracaoParaProximo: 200 }
+        ];
+
+        let inicio = null;
+
+        function animar(tempo) {
+            if (inicio === null) inicio = tempo;
+            let tempoDecorrido = tempo - inicio;
+
+            let indiceAtual = 0;
+            for (let i = 0; i < passosAnimacao.length - 1; i++) {
+                const duracaoDestePasso = passosAnimacao[i].duracaoParaProximo;
+                if (tempoDecorrido < duracaoDestePasso) {
+                    indiceAtual = i;
+                    break;
+                }
+                tempoDecorrido -= duracaoDestePasso;
+                indiceAtual = i + 1;
+            }
+
+            if (indiceAtual >= passosAnimacao.length - 1) {
+                inicio = tempo;
+                animar(tempo);
+                return;
+            }
+
+            const estado = passosAnimacao[0];
+
+            let hx, hy;
+            if (estado.livre) {
+                hx = estado.x;
+                hy = estado.y;
+            } else {
+                const pos = posicaoFuro(estado.a);
+                hx = pos[0];
+                hy = pos[1];
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            desenharCenario();
+
+            if (estado.livre) {
+                arcoArgola(-60 * grau, 198 * grau);
+                desenharCartao(hx, hy, estado.angulo, estado.inclinacaoVertical, estado.inclinacaoLateral);
+            } else {
+                arcoArgola(-60 * grau, estado.a);
+                desenharCartao(hx, hy, estado.angulo, estado.inclinacaoVertical, estado.inclinacaoLateral);
+                arcoArgola(estado.a, 198 * grau);
+            }
+            
+            // Desenho da imagem condicionada ao estado atual (0: opacidade padrão, 1: opacidade total, 2: oculto)
+            if (estadoVisualizacao !== 2 && imagemReferencia.complete && imagemReferencia.naturalWidth > 0) {
+                ctx.save();
+                
+                // Define a opacidade baseada no estado atual
+                ctx.globalAlpha = (estadoVisualizacao === 0) ? opacidadePadrao : 1.0;
+    
+                let imgLargura = imagemReferencia.naturalWidth;
+                let imgAltura = imagemReferencia.naturalHeight;
+    
+                let escala = Math.min(350 / imgLargura, 1000 / imgAltura);
+                imgLargura *= escala;
+                imgAltura *= escala;
+    
+                let posX = (canvas.width - imgLargura) / 2;
+                let posY = (canvas.height - imgAltura) / 2;
+    
+                ctx.drawImage(imagemReferencia, posX, posY, imgLargura, imgAltura);
+                ctx.restore();
+            }
+            
+            requestAnimationFrame(animar);
+        }
+
+        requestAnimationFrame(animar);
+    </script>
+</body>
+</html>
